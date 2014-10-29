@@ -184,7 +184,11 @@ add a plugin by calling
 
 -----
 ## More Info & Examples
-Check out the tests
+Check out the tests.
+* install moka and chai:
+`npm install -g mocha chai`
+* run the tests
+`cd skywalker && mocha`
 
 ----
 ## License
