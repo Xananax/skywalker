@@ -1,0 +1,1 @@
+var Tree = module.exports = require('./lib/Tree');
