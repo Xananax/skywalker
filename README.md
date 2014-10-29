@@ -178,8 +178,8 @@ Additionally, you have some convenience filters to ignore things:
 Skywalker ships with a few examples plugins (not loaded, copy-paste them where you need them). They are:
 
 - images: outputs size (width,height), imageMode (landscape, portrait, square) and ratio (1.xxx) to the "_" property of images
-- json: parses json files. Sets the raw data on the "\_.contents" and the parsed data on "_.data"
-- markdown: parses markdown files. Sets the raw data on "\_.contents" and the rendered content on "_.rendered"
+- json: parses json files. Sets the raw data on the "\_.contents" and the parsed data on "\_.data"
+- markdown: parses markdown files. Sets the raw data on "\_.contents" and the rendered content on "\_.rendered"
 - size: adds a human readable size property on the file object itself
 - websafe: turns file names ("my nice image.jpeg") to a string that can be used in a classname or as an id ("my_nice_image"), and sets it on the "_.safename" property
 
