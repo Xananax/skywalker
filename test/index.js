@@ -226,6 +226,20 @@ describe("Adding Filters",function(){
 			})
 		;
 	})
+	it("should allow to remove files in filters",function(done){
+		var images = 0;
+		Tree(dir+'/test')
+			.extensionFilter('jpg jpeg png',function(next,done){
+				images++;
+				done(null,false);
+			})
+			.start(function(err,file){
+				images.should.equal(2);
+				file.images._.children.length.should.equal(0);
+				done();
+			})
+		;
+	})
 	it("should allow to match filters by globbing",function(done){
 		var images = 0;
 		Tree(dir+'/test')
