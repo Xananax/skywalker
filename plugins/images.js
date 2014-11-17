@@ -23,4 +23,5 @@ module.exports = function(tree,key){
 
 	tree.extensionFilter('jpg jpeg tiff tif png bmp gif',getDimensions);
 
+	return 'images';
 }

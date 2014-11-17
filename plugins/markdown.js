@@ -20,4 +20,6 @@ module.exports = function(tree,key){
 		})
 	});
 
+	return 'markdown';
+
 }

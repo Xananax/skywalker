@@ -9,4 +9,6 @@ module.exports = function(tree,key){
 		next();
 	});
 
+	return 'size';
+
 }

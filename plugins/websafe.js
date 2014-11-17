@@ -15,4 +15,6 @@ module.exports = function(tree,key){
 		next();
 	});
 
+	return 'websafe';
+
 }
