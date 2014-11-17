@@ -186,6 +186,8 @@ Additionally, you have some convenience filters to ignore things:
 - `ignoreFiles(regex|glob)`: that too
 - `ignoreDotFiles()`: ignores files and directories that begin with '.'
 
+For an wide array of examples, check out [skywalker-extended](https://github.com/Xananax/skywalker-extended)
+
 -----
 ## Selectors
 Selectors run *after* the tree has been parsed and allow for further filtering.
