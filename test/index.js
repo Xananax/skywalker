@@ -50,7 +50,7 @@ describe('Walking a directory',function(){
 				done();
 			})
 		;
-	})
+	});
 	it("should allow to limit depth",function(done){
 		function testWithLimit(next){
 			Tree(dir)
@@ -71,7 +71,7 @@ describe('Walking a directory',function(){
 		}
 
 		testWithoutLimits(testWithLimit,done);
-	})
+	});
 	it("should allow looping through members names",function(done){
 		Tree(dir)		
 			.start(function(err,file){
@@ -90,8 +90,7 @@ describe('Walking a directory',function(){
 			});
 		;
 	});
-	/** /
-	it("should throw an error if errors are set to be thrown",function(done){
+	it.skip("should throw an error if errors are set to be thrown",function(done){
 		var fn = function(){
 			Tree('/some_path that doesn\'t exist lalala')
 				.throwErrors(true)
@@ -100,7 +99,6 @@ describe('Walking a directory',function(){
 		expect(fn).to.throw();
 		;
 	})
-	/**/
 });
 
 describe("Using Events",function(){
@@ -240,7 +238,95 @@ describe("Adding Filters",function(){
 				done();
 			})
 		;
-	})
+	});
+})
+
+describe("Adding Selectors",function(){
+	it("should allow for adding a size selector",function(done){
+		Tree(dir)
+			.ignoreDotFiles()
+			.selectors('size > 6100')
+			.start(function(err,file){
+				var c = file._.children;
+				c[0]._.filename.should.equal('README.md');
+				done();
+			});
+	});
+	it("should allow for a matching selector",function(done){
+		Tree(dir+'/test')
+			.ignoreDotFiles()
+			.selectors('path # dummy')
+			.start(function(err,file){
+				var c = file._.children;
+				c[0]._.filename.should.equal('dummy.json');
+				done();
+			});
+	});
+	it("should allow for an extension selector",function(done){
+		Tree(dir+'/test')
+			.ignoreDotFiles()
+			.selectors('. json')
+			.start(function(err,file){
+				var c = file._.children;
+				c[0]._.filename.should.equal('dummy.json');
+				done();
+			});
+	});
+	it("should allow for a path selector",function(done){
+		Tree(dir+'/test')
+			.ignoreDotFiles()
+			.selectors('/ **/images*')
+			.start(function(err,file){
+				var c = file._.children;
+				c[0]._.filename.should.equal('images');
+				done();
+			})
+		;
+	});
+	it("should allow for a mimetype selector",function(done){
+		Tree(dir+'/test')
+			.ignoreDotFiles()
+			.selectors('@ json')
+			.start(function(err,file){
+				var c = file._.children;
+				c[0]._.filename.should.equal('dummy.json');
+				done();
+			})
+		;
+	});
+	it("should allow for a directory filter",function(done){
+		Tree(dir+'/test')
+			.ignoreDotFiles()
+			.selectors('D')
+			.start(function(err,file){
+				var c = file._.children;
+				c[0]._.filename.should.equal('images');
+				done();
+			})
+		;
+	});
+	it("should allow for a file filter",function(done){
+		Tree(dir+'/test')
+			.ignoreDotFiles()
+			.selectors('F')
+			.start(function(err,file){
+				var c = file._.children;
+				c.length.should.equal(2);
+				done();
+			})
+		;
+	});
+	it("should allow for directives chaining",function(done){
+		Tree(dir+'/test')
+			.ignoreDotFiles()
+			.selectors('F & @ json')
+			.start(function(err,file){
+				var c = file._.children;
+				c.length.should.equal(1);
+				done();
+			})
+		;
+	});
 })
 
 describe("File Properties",function(){
@@ -259,7 +345,6 @@ describe("File Properties",function(){
 				props.isDirectory.should.be.false;
 				props.mime.type.should.be.equal('image');
 				props.mime.subType.should.be.equal('jpeg');
-				props.stats.should.be.an('object');
 				done();
 			})
 		;
@@ -282,13 +367,13 @@ describe("File Properties",function(){
 				var images = file._.children;
 				var size = 0
 				for(var i=0,image;image=images[i++];){
-					size+=image._.stats.size;
+					size+=image._.size;
 				}
-				size.should.be.equal(file._.stats.size);
+				size.should.be.equal(file._.size);
 				done();
 			})
 		;
-	})
+	});
 });
 
 describe("Plugin Interface",function(){
@@ -316,7 +401,7 @@ describe("Plugin Interface",function(){
 			.ignoreDotFiles()
 			.plugin(require('../plugins/size'))
 			.start(function(err,file){
-				file._.size.should.be.a('string').and.match(/MB/);
+				file._.humanSize.should.be.a('string').and.match(/MB/);
 				done();
 			})
 		;
@@ -365,7 +450,7 @@ describe("Plugin Interface",function(){
 				done();
 			})
 		;
-	})
+	});
 	it("has a plugin to parse json files automatically",function(done){
 		Tree(dir+'/test')
 			.ignoreDotFiles()
@@ -378,7 +463,7 @@ describe("Plugin Interface",function(){
 				done();
 			})
 		;
-	})
+	});
 });
 
 describe("ToString",function(){
@@ -392,7 +477,7 @@ describe("ToString",function(){
 				done();
 			})
 		;
-	})
+	});
 	it("should output the file contents if rendered to string and 'contents' exists",function(done){
 		Tree(dir+'/test')
 			.ignoreDotFiles()
@@ -404,7 +489,7 @@ describe("ToString",function(){
 				done();
 			})
 		;
-	})
+	});
 	it("should output the file rendered if rendered to string and 'rendered' exists",function(done){
 		Tree(dir)
 			.ignoreDotFiles()
@@ -414,6 +499,19 @@ describe("ToString",function(){
 				var c = require('fs').readFileSync(dir+'/README.md',{encoding:'utf8'});
 				var markdown = require('markdown').markdown.toHTML(c);
 				(file['README.md']+"").should.be.equal(markdown);
+				done();
+			})
+		;
+	});
+});
+
+describe("Post Tree Building",function(){
+	it("should allow to group files by extension",function(done){
+		var db = Tree.db;
+		Tree(dir)
+			.ignoreDotFiles()
+			.start(function(err,file){
+				//db(file).walk(function(){console.log(this._.path)});
 				done();
 			})
 		;

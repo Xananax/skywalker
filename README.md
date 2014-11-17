@@ -112,6 +112,20 @@ The following properties are to be found:
  - `file._.mime`  mimetype, for example 'text/plain'
  - `file._.mime.type`  for example 'text'
  - `file._.mime.subType` for example, 'plain'
+ - and all `stats` properties, which are:
+ 	+ `dev`
+ 	+ `mode`
+ 	+ `nlink`
+ 	+ `uid`
+ 	+ `gid`
+ 	+ `rdev`
+ 	+ `blksize`
+ 	+ `ino`
+ 	+ `size` works for directories too
+ 	+ `blocks`
+ 	+ `atime` converted to a unix timestamp
+ 	+ `mtime` converted to a unix timestamp
+ 	+ `ctime` converted to a unix timestamp
 
 Plugins may add properties to this object (see below).
 
@@ -173,6 +187,48 @@ Additionally, you have some convenience filters to ignore things:
 - `ignoreDotFiles()`: ignores files and directories that begin with '.'
 
 -----
+## Selectors
+Selectors run *after* the tree has been parsed and allow for further filtering.
+
+```js
+	var Tree = require('skywalker');
+	var db = Tree.db;
+	Tree(__dirname)
+		.ignoreDotFiles()
+		.selectors('F & size > 6100')
+		.start(function(err,file){
+			var c = file._.children;
+			for(var n in c){console.log(c[n]._.path)}
+		})
+```
+
+A selector presents itself as such:
+`property operator value`
+
+- `property` is any property of the file, found on the `_` object. That is any 'native' property, or any property added by a plugin
+- `operator` is one of the operators below
+- `value` is the value compared to. some operators don't require a value
+
+You can chain selectors with '&'.
+Available selectors are:
+
+- Selectors with properties:
+	- `GREATER_THAN : '>'` example: `size > 6100`
+	- `LOWER_THAN: '<'` example: `atime < 1416242596`
+	- `GREATER_OR_EQUAL: '>='` 
+	- `LOWER_OR_EQUAL: '<='`
+	- `EQUAL: '=='`
+	- `EQUAL_STRICT: '==='`
+	- `MATCHES: '#'` example: `path # node_modules`
+- Selectors that require a value only:
+	- `EXTENSION: '.'` example `. jpg` (does not require a property)
+	- `PATH: '/'` example `/ node_modules` (similar to the `matches` example above, but globbing is allowed)
+	- `MIMETYPE: '@'` example: `@ text/javascript`
+- Selectors that require an operator only:
+	- `ISDIR: 'D'`
+	- `ISFILE:'F'`
+
+-----
 ## Plugins
 
 Skywalker ships with a few examples plugins (not loaded, copy-paste them where you need them). They are:
@@ -180,7 +236,7 @@ Skywalker ships with a few examples plugins (not loaded, copy-paste them where y
 - images: outputs size (width,height), imageMode (landscape, portrait, square) and ratio (1.xxx) to the "_" property of images
 - json: parses json files. Sets the raw data on the "\_.contents" and the parsed data on "\_.data"
 - markdown: parses markdown files. Sets the raw data on "\_.contents" and the rendered content on "\_.rendered"
-- size: adds a human readable size property on the file object itself
+- size: adds a human readable size property called `humanSize`
 - websafe: turns file names ("my nice image.jpeg") to a string that can be used in a classname or as an id ("my_nice_image"), and sets it on the "_.safename" property
 
 add a plugin by calling  
