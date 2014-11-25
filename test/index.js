@@ -1,7 +1,7 @@
 var path = require('path');
-var dir = path.resolve(__dirname+'/..')
-var chai = require('chai')
-var expect = chai.expect
+var dir = path.resolve(__dirname+'/..');
+var chai = require('chai');
+var expect = chai.expect;
 var Tree = require('../index');
 chai.should();
 
@@ -78,16 +78,25 @@ describe('Walking a directory',function(){
 				for(var n in file){
 					if(n=='node_modules'){done();}
 				}
-			});
+			})
 		;
 	});
 	it("should allow looping through the _.children array",function(done){
 		Tree(dir)		
 			.start(function(err,file){
-				for(var i=0,f;f=file._.children[i++];){
+				var i,f;
+				for(i=0;f=file._.children[i++];){
 					if(f._.name=="node_modules"){done();}
 				}
-			});
+			})
+		;
+	});
+	it("should be able to run on a single file",function(done){
+		Tree(dir+'/test/dummy.json')
+			.start(function(err,files){
+				files._.filename.should.equal('dummy.json');
+				done();
+			})
 		;
 	});
 	it.skip("should throw an error if errors are set to be thrown",function(done){
@@ -95,10 +104,9 @@ describe('Walking a directory',function(){
 			Tree('/some_path that doesn\'t exist lalala')
 				.throwErrors(true)
 				.start(function(err,file){});
-		}
+		};
 		expect(fn).to.throw();
-		;
-	})
+	});
 });
 
 describe("Using Events",function(){
@@ -146,8 +154,8 @@ describe("Using Events",function(){
 			.on("error",function(err){done();})
 			.start(function(err,file){})
 		;
-	})
-})
+	});
+});
 
 describe("Adding Filters",function(){
 	it("should allow to add regex filters",function(done){
@@ -183,7 +191,7 @@ describe("Adding Filters",function(){
 		Tree(dir+'/test')
 			.fileFilter(/i[^\/]*?$/,function(next){
 				filesThatBeginWithI++;
-				expect(this._.path).to.match(/index\.js/)
+				expect(this._.path).to.match(/index\.js/);
 				next();
 			})
 			.start(function(err,file){
@@ -198,12 +206,12 @@ describe("Adding Filters",function(){
 		Tree(dir+'/test')
 			.mimeFilter('application/javascript',function(next){
 				filesThatBeginWithI++;
-				expect(this._.path).to.match(/index\.js/)
+				expect(this._.path).to.match(/index\.js/);
 				next();
 			})
 			.mimeFilter('javascript',function(next){
 				filesThatBeginWithI++;
-				expect(this._.path).to.match(/index\.js/)
+				expect(this._.path).to.match(/index\.js/);
 				next();
 			})
 			.start(function(err,file){
@@ -225,7 +233,7 @@ describe("Adding Filters",function(){
 				done();
 			})
 		;
-	})
+	});
 	it("should allow to remove files in filters",function(done){
 		var images = 0;
 		Tree(dir+'/test')
@@ -239,7 +247,7 @@ describe("Adding Filters",function(){
 				done();
 			})
 		;
-	})
+	});
 	it("should allow to match filters by globbing",function(done){
 		var images = 0;
 		Tree(dir+'/test')
@@ -253,7 +261,26 @@ describe("Adding Filters",function(){
 			})
 		;
 	});
-})
+	it("should be able to run on a single file",function(done){
+		Tree(dir+'/test/dummy.json')
+			.extensionFilter('json',function(next,done){
+				var props = this._;
+				require('fs').readFile(props.path,{encoding:'utf8'},function(err,contents){
+					if(err){throw err;}
+					contents = JSON.parse(contents);
+					props.setProp('contents',contents);
+					next();
+				});
+			})
+			.start(function(err,files){
+				files._.filename.should.equal('dummy.json');
+				files._.contents.should.have.property('someprop');
+				files._.contents.someprop.should.equal('somevalue');
+				done();
+			})
+		;
+	});
+});
 
 describe("Adding Selectors",function(){
 	it("should allow for adding a size selector",function(done){
@@ -341,7 +368,7 @@ describe("Adding Selectors",function(){
 			})
 		;
 	});
-})
+});
 
 describe("File Properties",function(){
 	it("should contain several properties",function(done){
@@ -352,10 +379,10 @@ describe("File Properties",function(){
 				props.path.should.be.a('string');
 				props.dirname.should.be.a('string');
 				props.filename.should.be.a('string');
-				props.extension.should.be.equal('jpg')
+				props.extension.should.be.equal('jpg');
 				props.name.should.be.a('string');
 				props.contents.should.be.empty;
-				props.type.should.be.equal('file')
+				props.type.should.be.equal('file');
 				props.isDirectory.should.be.false;
 				props.mime.type.should.be.equal('image');
 				props.mime.subType.should.be.equal('jpeg');
@@ -379,8 +406,9 @@ describe("File Properties",function(){
 		Tree(dir+'/test/images')
 			.start(function(err,file){
 				var images = file._.children;
-				var size = 0
-				for(var i=0,image;image=images[i++];){
+				var size = 0;
+				var image;
+				for(var i=0;image=images[i++];){
 					size+=image._.size;
 				}
 				size.should.be.equal(file._.size);
@@ -396,7 +424,7 @@ describe("Plugin Interface",function(){
 		var simplePlugin =function(tree,key){
 			tree.filter(null,function(next,done){
 				var props = this[key];
-				props.setProp('number',num++)
+				props.setProp('number',num++);
 				next();
 			});
 		};
@@ -518,16 +546,3 @@ describe("ToString",function(){
 		;
 	});
 });
-
-describe("Post Tree Building",function(){
-	it("should allow to group files by extension",function(done){
-		var db = Tree.db;
-		Tree(dir)
-			.ignoreDotFiles()
-			.start(function(err,file){
-				//db(file).walk(function(){console.log(this._.path)});
-				done();
-			})
-		;
-	})
-})
