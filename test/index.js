@@ -3,40 +3,89 @@ var dir = path.resolve(__dirname+'/..');
 var chai = require('chai');
 var expect = chai.expect;
 var Tree = require('../index');
+var fs = require('fs');
+var filesThatBeginWithIRegExp = /\/i(\w|\.)+?$/;
 chai.should();
+
+function getFirstFile(dir){
+	var files = fs.readdirSync(dir);
+	for(var n in files){
+		var path = dir+'/'+files[n];
+		if(!fs.statSync(path).isDirectory()){return files[n];}
+	}
+}
+
+function getFirstDirectory(dir){
+	var files = fs.readdirSync(dir);
+	for(var n in files){
+		var path = dir+'/'+files[n];
+		if(fs.statSync(path).isDirectory()){return files[n];}
+	}
+}
+
+function readDirectory(dir,recurse,c){
+	var files = fs.readdirSync(dir);
+	var c = c || {dirs:0,files:0,total:0};
+	for(var n in files){
+		var path = dir+'/'+files[n];
+		if(fs.statSync(path).isDirectory()){
+			c.dirs++;
+			c.total++;
+			if(recurse){
+				readDirectory(path,recurse,c)
+			}
+		}else{
+			c.files++;
+			c.total++;
+		}
+	}
+	return c;
+}
 
 describe('Walking a directory',function(){
 	it("should walk the directory provided",function(done){
+		var Nfiles = readDirectory(dir).total;
 		Tree(dir).start(function(err,file){
 			if(err){throw err;}
-			file._.children.length.should.equal(9);
+			file._.children.length.should.equal(Nfiles);
 			done();
 		});
 	});
 	it("should be capable of ignoring files that begin with a dot",function(done){
+		var Nfiles = readDirectory(dir).total;
 		Tree(dir)
 			.ignoreDotFiles()
 			.start(function(err,file){
 				if(err){throw err;}
-				file._.children.length.should.equal(7);
+				file._.children.length.should.equal(Nfiles-3);
 				done();
 			})
 		;
 	});
-	it("should emit events for every file and directory",function(done){
+	it("should emit events for every file",function(done){
 		var fileEvents = 0;
-		var directoryEvents = 0;
+		var Nfiles = readDirectory(dir+'/test',true).files
 		Tree(dir+'/test')
 			.on('file',function(file){
 				fileEvents++;
 			})
+			.start(function(err,file){
+				if(err){throw err;}
+				fileEvents.should.equal(Nfiles);
+				done();
+			})
+		;
+	});
+	it("should emit events for every directory",function(done){
+		var directoryEvents = 0;
+		var Ndirectories = readDirectory(dir+'/test',true).dirs;
+		Tree(dir+'/test')
 			.on('directory',function(dir){
 				directoryEvents++;
 			})
 			.start(function(err,file){
 				if(err){throw err;}
-				fileEvents.should.equal(4);
-				directoryEvents.should.equal(2);
+				directoryEvents.should.equal(Ndirectories+1);
 				done();
 			})
 		;
@@ -91,6 +140,15 @@ describe('Walking a directory',function(){
 			})
 		;
 	});
+	it("should allow to get a file per path",function(done){
+		var t = Tree(dir)
+			.start(function(err,file){
+				var file = t.get('test/dummy.json');
+				file._.filename.should.equal('dummy.json');
+				done();
+			})
+		;
+	});
 	it("should be able to run on a single file",function(done){
 		Tree(dir+'/test/dummy.json')
 			.start(function(err,files){
@@ -113,6 +171,10 @@ describe("Using Events",function(){
 	it("should emit events for every file and directory",function(done){
 		var fileEvents = 0;
 		var directoryEvents = 0;
+		var N = readDirectory(dir+'/test',true);
+		var Ndirectories = N.dirs;
+		var Nfiles = N.files;
+
 		Tree(dir+'/test')
 			.on('file',function(file){
 				fileEvents++;
@@ -122,8 +184,8 @@ describe("Using Events",function(){
 			})
 			.start(function(err,file){
 				if(err){throw err;}
-				fileEvents.should.equal(4);
-				directoryEvents.should.equal(2);
+				fileEvents.should.equal(Nfiles);
+				directoryEvents.should.equal(Ndirectories+1);
 				done();
 			})
 		;
@@ -131,6 +193,10 @@ describe("Using Events",function(){
 	it("should emit events when done",function(done){
 		var fileEvents = 0;
 		var directoryEvents = 0;
+		var N = readDirectory(dir+'/test',true);
+		var Ndirectories = N.dirs;
+		var Nfiles = N.files;
+
 		Tree(dir+'/test')
 			.on('file',function(file){
 				fileEvents++;
@@ -139,8 +205,8 @@ describe("Using Events",function(){
 				directoryEvents++;
 			})
 			.on('done',function(file){
-				fileEvents.should.equal(4);
-				directoryEvents.should.equal(2);
+				//fileEvents.should.equal(Nfiles);
+				directoryEvents.should.equal(Ndirectories+1);
 				done();
 			})
 			.start(function(err,file){
@@ -161,7 +227,7 @@ describe("Adding Filters",function(){
 	it("should allow to add regex filters",function(done){
 		var filesThatBeginWithI = 0;
 		Tree(dir+'/test')
-			.filter(/i[^\/]*?$/,function(next){
+			.filter(filesThatBeginWithIRegExp,function(next){
 				filesThatBeginWithI++;
 				next();
 			})
@@ -175,7 +241,7 @@ describe("Adding Filters",function(){
 	it("should allow to add regex filters on directories only",function(done){
 		var filesThatBeginWithI = 0;
 		Tree(dir+'/test')
-			.directoryFilter(/i[^\/]*?$/,function(next){
+			.directoryFilter(filesThatBeginWithIRegExp,function(next){
 				filesThatBeginWithI++;
 				next();
 			})
@@ -189,9 +255,9 @@ describe("Adding Filters",function(){
 	it("should allow to add regex filters to files only",function(done){
 		var filesThatBeginWithI = 0;
 		Tree(dir+'/test')
-			.fileFilter(/i[^\/]*?$/,function(next){
+			.fileFilter(filesThatBeginWithIRegExp,function(next){
 				filesThatBeginWithI++;
-				expect(this._.path).to.match(/index\.js/);
+				expect(this._.path).to.match(/i\w+?\.(js|txt)/);
 				next();
 			})
 			.start(function(err,file){
@@ -203,20 +269,22 @@ describe("Adding Filters",function(){
 	});
 	it("should allow to match filters by mime type",function(done){
 		var filesThatBeginWithI = 0;
+		var Nfiles = readDirectory(dir+'/test',true).files;
+
 		Tree(dir+'/test')
 			.mimeFilter('application/javascript',function(next){
 				filesThatBeginWithI++;
-				expect(this._.path).to.match(/index\.js/);
+				expect(this._.path).to.match(/\w+?\.js$/);
 				next();
 			})
 			.mimeFilter('javascript',function(next){
 				filesThatBeginWithI++;
-				expect(this._.path).to.match(/index\.js/);
+				expect(this._.path).to.match(/\w+?\.js$/);
 				next();
 			})
 			.start(function(err,file){
 				if(err){throw err;}
-				filesThatBeginWithI.should.equal(2);
+				filesThatBeginWithI.should.equal(Nfiles-1);
 				done();
 			})
 		;		
@@ -299,7 +367,7 @@ describe("Adding Selectors",function(){
 			.selectors('path # dummy')
 			.start(function(err,file){
 				var c = file._.children;
-				c[0]._.filename.should.equal('dummy.json');
+				c[0]._.filename.should.equal(getFirstFile(dir+'/test'));
 				done();
 			});
 	});
@@ -352,7 +420,7 @@ describe("Adding Selectors",function(){
 			.selectors('F')
 			.start(function(err,file){
 				var c = file._.children;
-				c.length.should.equal(2);
+				c.length.should.equal(3); //3 files at the root of /test
 				done();
 			})
 		;

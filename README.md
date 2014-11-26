@@ -64,12 +64,13 @@ _Can't believe skywalker was not already in use on npmjs._
 			for(var n in file){
 				console.log(file[n]);
 			}
-			//or
+			/**or**/
 			var children = file._.children;
-			for(var i=0;i<children.length;i++){
+			for(var i=0 ; i < children.length ; i++){
 				console.log(children[i]._.name);
 			}
 		})
+	;
 ```
 
 If for some reason you want to set the root directory name later (not at instantiation), do that:
@@ -94,6 +95,38 @@ However, if you prefer event-style error handling, do the following:
 	.start(func);
 ```
 
+Directories children are accessible in two manners:
+```js
+	var t = Tree(dir).start(function(err,files){
+		//either use:
+		files._.children;
+		for(var i = 0, l = files._.children.length;i < l;i++){
+			console.log(files._.children[i]._.filename);
+		}
+		//or:
+		files['child_name.jpg'];
+		//or even:
+		files['subdir']['child_name.jpg'];
+		for(var n in files){
+			console.log(n,files[n]._.path);
+		}
+	});
+```
+Children always exists on all `file` instances, even when they are not directories, so you can safely just loop, and the loop will not run when `children.length` is 0.  
+Any property other than children is not enumerable, so `for...in` loops are also safe to use without prior checking if the file is a directory.  
+
+However, if you have a filter running that disables files AND you are watching, then a file might be null, so you might want to do:
+
+```js
+	var t = Tree(dir).start(function(err,files){
+		for(var n in files){
+			if(!files[n]){continue;}
+			console.log(n,files[n]._.path);
+		}
+	});
+```
+
+
 -----
 ## Files Properties
 
@@ -112,6 +145,7 @@ The following properties are to be found:
  - `file._.mime`  mimetype, for example 'text/plain'
  - `file._.mime.type`  for example 'text'
  - `file._.mime.subType` for example, 'plain'
+ - `file._.isDirectory` true for directories, false for everything else
  - and all `stats` properties, which are:
  	+ `dev`
  	+ `mode`
@@ -165,6 +199,73 @@ To detect mimetypes, skywalker uses [node-mime](https://github.com/broofa/node-m
 ```
 
 ------
+## Watch
+
+Skywalker doesn't know how to watch, but it is "watch-ready". Thus, you are able to implement any watching system you like.
+swap `start([callback])` with `watch(watchFunction[,callback])`
+
+`watchFunction` receives two arguments: a "watchHelpers" object that contains helpers, and a callback function to run when ready.
+
+```js
+	var t = Tree(dir)
+		.on(/** something, function **/)
+		/**...**/
+		.watch(function(watchHelpers,done){
+			var watcher = myWatchImplementation(watchHelpers.filename);
+			watcher.on('new',function(filename){
+				watchHelper.onCreated(filename);
+			});
+			watcher.on('systemError',function(err){
+				done(err);
+			});
+			watcher.on('ready',function(){
+				done(null,function(){watcher.stop();})
+			});
+		},callback)
+	;
+	//later:
+	t.unwatch(); //calls watcher.stop()
+```
+
+Available helpers are:
+
+- `watchHelpers.filename` the root directory
+- `watchHelpers.tree` the skywalker instance
+- `watchHelpers.onCreated(filepath)`
+- `watchHelpers.onChanged(filepath)`
+- `watchHelpers.onRemoved(filepath)`
+- `watchHelpers.onRenamed(filepathNew,filepathOld)`
+- `watchHelpers.onError(error)`
+
+Look in /watchers for an example implementation
+
+As an alternative to implementing your own function, you may simply specify the implementation like so:
+```js
+	var t = Tree(dir)
+		.on(/** something, function **/)
+		/**...**/
+		.watch('gaze',callback)
+```
+
+Available implementations are [gaze](https://github.com/shama/gaze), [watch](https://github.com/mikeal/watch), and [chokidar](https://github.com/paulmillr/chokidar). Note that they are not bundled with skywalker and that you will have to install them separately.
+
+------
+## Events
+
+the following events are emitted from Skywalker:
+
+- FILE: 'file': emitted when a file is processed
+- DIRECTORY: 'directory': emitted when a directory is processed
+- DONE: 'done': emitted when all files have been processed
+- ERROR: 'error': emitted when an error is encountered
+- CREATED: 'created': emitted when a file or directory is created (if `watch()`ing)
+- REMOVED: 'remove': emitted when a file or directory is deleted (if `watch()`ing)
+- CHANGED: 'change': emitted when a file or directory is modified (if `watch()`ing)
+- RENAMED: 'rename': emitted when a file or directory is renamed (if `watch()`ing)
+
+The events strings live on Skywalker.Events, so instead of `on('error')`, you can use `on(Tree.Events.ERROR)`.
+
+------
 ## Filters
 There are several available filters, they all have the same signature:
 `filterFunction(regex|glob|null,func)`
@@ -179,6 +280,7 @@ Available filters are:
 - `fileFilter(regex|glob,func)`: acts only on files
 - `extensionFilter(string,func)`: you can provide a space-separated string of extension (`jpg jpeg bmp`), will act only on those extensions
 - `mimeFilter(regex|glob,func)`: will act only on matched mime type
+**Careful!** `fileFilter`, `mimefilter` and `extensionFilter` will *not* descend in sub-directories! Use a normal filter for that.
 
 Additionally, you have some convenience filters to ignore things:
 - `ignore(regex|glob)`: will ignore files that match the pattern

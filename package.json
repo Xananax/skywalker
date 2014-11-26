@@ -20,6 +20,9 @@
     "node.extend": "^1.0.10"
   },
   "devDependencies": {
+    "chokidar": "^0.11.1",
+    "watch": "^0.13.0",
+    "gaze": "^0.6.4",
     "chai": "^1.9.2",
     "mocha": "^2.0.1",
     "checksum": "^0.1.1",
